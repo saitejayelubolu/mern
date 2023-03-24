@@ -1,7 +1,15 @@
 import React, { useRef, useState, useEffect, useAuth } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import axios from "axios";
+import { Link, Routes, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 function Login() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (localStorage.getItem("user-info")) {
+      navigate("/user");
+    }
+  }, []);
   const {
     register,
     handleSubmit,
@@ -13,6 +21,35 @@ function Login() {
     setValue,
   } = useForm({});
 
+  const onSubmit = async data => {
+    // data.preventDefault();
+    const username = data.username;
+    const password = data.password;
+
+    await axios
+      .post(
+        "http://localhost:4000/login/",
+        {
+          username: username,
+          password: password,
+        },
+        {
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then(result => {
+        console.log("res", result);
+        localStorage.setItem("user-info", JSON.stringify(result));
+        navigate("/user");
+      })
+      .catch(err => {
+        console.log("errors", err);
+      });
+  };
+
   return (
     <>
       <div className="App">
@@ -22,7 +59,7 @@ function Login() {
               method="post"
               name="userRegistrationForm"
               className="flex-c form-width justify-content-md-center logform"
-              onSubmit={handleSubmit()}
+              onSubmit={handleSubmit(onSubmit)}
             >
               <div className="mb-3">
                 <h2 className="mt-0 mb-5 hrm">Login </h2>

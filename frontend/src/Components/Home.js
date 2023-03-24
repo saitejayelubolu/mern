@@ -17,7 +17,7 @@ function Home() {
 
   let navigate = useNavigate();
   const routeRegister = () => {
-    let path = `register`;
+    let path = `signup`;
     navigate(path);
   };
 
@@ -37,7 +37,7 @@ function Home() {
                 onClick={routeRegister}
                 type="button"
               >
-                Register
+                Signup
               </button>
               <button
                 className="btn btn-primary m-5"

@@ -1,20 +1,31 @@
 import React, { useRef, useState, useEffect, useAuth } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { Link, Routes, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-
 import "../App.css";
-function UserData({ id }) {
+
+function UserData() {
   const [user, setUser] = useState([]);
+  const navigate = useNavigate();
+  const userdetails = JSON.parse(localStorage.getItem("user-info"));
+  const token = userdetails.data.token;
+  let uid = userdetails.data.userid;
+  console.log(token);
+
   const getUser = async () => {
     axios
-      .get("http://localhost:4000/user/1")
+      .get(`http://localhost:4000/user/${uid}`)
       .then(response => setUser(response.data))
       .catch(error => console.log(error));
   };
   useEffect(() => {
     getUser();
   }, []);
-  console.log(user[0].name);
+
+  const routeUpdate = () => {
+    navigate("/update");
+  };
+  // console.log(user[0].name);
   return (
     <div>
       <div>
@@ -31,6 +42,9 @@ function UserData({ id }) {
             <span>{user.gender}</span>
             <br></br>
             <span>{user.dateofbirth}</span>
+            <button type="button" onClick={routeUpdate}>
+              Edit
+            </button>
           </div>
         ))}
       </div>

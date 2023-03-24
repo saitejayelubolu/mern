@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect, useAuth } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useForm } from "react-hook-form";
-function Register() {
+import axios from "axios";
+function Signup() {
   const {
     register,
     handleSubmit,
@@ -12,6 +13,49 @@ function Register() {
     getValues,
     setValue,
   } = useForm({});
+
+  const onSubmit = async data => {
+    // data.preventDefault();
+    const firstname = data.firstname;
+    const lastname = data.lastname;
+    const address = data.address;
+    const phonenumber = data.phonenumber;
+    const emailid = data.emailid;
+    const gender = data.gender;
+    const dateofbirth = data.dateofbirth; // Format = "1990-01-01"
+    const username = data.username;
+    const newpassword = data.newpassword;
+    const confirmpassword = data.confirmpassword;
+
+    await axios
+      .post(
+        "http://localhost:4000/signup/",
+        {
+          firstname: firstname,
+          lastname: lastname,
+          address: address,
+          phonenumber: phonenumber,
+          emailid: emailid,
+          gender: gender,
+          dateofbirth: dateofbirth,
+          username: username,
+          newpassword: newpassword,
+          confirmpassword: confirmpassword,
+        },
+        {
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then(result => {
+        console.log("res", result);
+      })
+      .catch(err => {
+        console.log("errors", err);
+      });
+  };
   return (
     <>
       <div className="App">
@@ -21,10 +65,10 @@ function Register() {
               method="post"
               name="userRegistrationForm"
               className="flex-c form-width justify-content-md-center logform"
-              onSubmit={handleSubmit()}
+              onSubmit={handleSubmit(onSubmit)}
             >
               <div className="mb-3">
-                <h2 className="mt-0 mb-5 hrm">Register </h2>
+                <h2 className="mt-0 mb-5 hrm">Signup </h2>
               </div>
               <div className="form-group">
                 <label className="lbel">Username</label>
@@ -48,23 +92,45 @@ function Register() {
                 )}
               </div>
               <div className="form-group">
-                <label className="lbel">Password</label>
+                <label className="lbel">New Password</label>
                 <input
                   className="form-control p-0"
                   type="password"
-                  placeholder="Password"
-                  name="password"
-                  id="password"
-                  {...register("password", {
-                    required: "Password is required",
+                  placeholder="New Password"
+                  name="newpassword"
+                  id="newpassword"
+                  {...register("newpassword", {
+                    required: "newpassword is required",
                   })}
                   onKeyUp={() => {
-                    trigger("password");
+                    trigger("newpassword");
                   }}
                 />
-                {errors.password && (
+                {errors.newpassword && (
                   <small className="text-danger">
-                    {errors.password.message}
+                    {errors.newpassword.message}
+                  </small>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="lbel">Confirm Password</label>
+                <input
+                  className="form-control p-0"
+                  type="password"
+                  placeholder="Confirm Password"
+                  name="confirmpassword"
+                  id="confirmpassword"
+                  {...register("confirmpassword", {
+                    required: "confirmpassword is required",
+                  })}
+                  onKeyUp={() => {
+                    trigger("confirmpassword");
+                  }}
+                />
+                {errors.confirmpassword && (
+                  <small className="text-danger">
+                    {errors.confirmpassword.message}
                   </small>
                 )}
               </div>
@@ -180,20 +246,26 @@ function Register() {
               </div>
 
               <div className="form-group">
-                <label className="lbel">gender</label>
-                <input
-                  className="form-control p-0"
-                  type="text"
-                  placeholder="gender"
-                  name="gender"
-                  id="gender"
-                  {...register("gender", {
-                    required: "gender is required",
-                  })}
-                  onKeyUp={() => {
-                    trigger("gender");
-                  }}
-                />
+                <label htmlFor="male">
+                  <input
+                    {...register("gender")}
+                    type="radio"
+                    value="male"
+                    id="male"
+                  />
+                  male
+                </label>
+              </div>
+              <div className="form-group">
+                <label htmlFor="female">
+                  <input
+                    {...register("gender", { required: "gender is required" })}
+                    type="radio"
+                    value="female"
+                    id="female"
+                  />
+                  female
+                </label>
                 {errors.gender && (
                   <small className="text-danger">{errors.gender.message}</small>
                 )}
@@ -222,7 +294,7 @@ function Register() {
               </div>
               <div className="form-group mb-3">
                 <button className="btn btn-primary form-control" type="submit">
-                  Register
+                  Signup
                 </button>
               </div>
             </form>
@@ -233,4 +305,4 @@ function Register() {
   );
 }
 
-export default Register;
+export default Signup;

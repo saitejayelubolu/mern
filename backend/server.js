@@ -1,11 +1,18 @@
 const express = require("express");
 const mysql = require("mysql2");
 const bodyParser = require("body-parser");
+const bcrypt = require("bcrypt");
+const dotenv = require("dotenv").config();
+const jwt = require("jsonwebtoken");
+const cookie = require("cookie-parser");
+const { auth } = require("./config/JWT");
+var validator = require("validator");
 const app = express();
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 const cors = require("cors");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(cookie());
 app.use(cors());
 const connection = mysql.createConnection({
   host: "localhost",
@@ -22,30 +29,32 @@ connection.connect((err, connection) => {
   }
 });
 
-app.get("/", (req, res) => {
+const createToken = id => {
+  return jwt.sign({ id }, process.env.JWT_SECRET);
+};
+
+app.get("/", auth, (req, res) => {
   res.send("get success");
 });
 
-//Register
-app.post("/register", (req, res) => {
+//Signup
+app.post("/signup", (req, res) => {
   const firstName = req.body.firstname;
   const lastName = req.body.lastname;
   const name = firstName + " " + lastName;
-  console.log("name:", name);
-  // const name = req.body.name;
   const address = req.body.address;
   const phoneNumber = req.body.phonenumber;
   const emailid = req.body.emailid;
   const gender = req.body.gender;
   const dateOfBirth = req.body.dateofbirth; // Format = "1990-01-01"
   const username = req.body.username;
-  const newPassword = req.body.password;
+  const newPassword = req.body.newpassword;
   const confirmPassword = req.body.confirmpassword;
 
   connection.execute(
     `select username from users where username =?`,
     [username],
-    (err, usernameObj) => {
+    async (err, usernameObj) => {
       if (err) {
         res.send(err);
       } else if (usernameObj[0]) {
@@ -54,18 +63,24 @@ app.post("/register", (req, res) => {
         if (newPassword != confirmPassword) {
           res.send("Password is not matched");
         } else {
-          const password = newPassword;
+          let password = newPassword;
+          //hash
+          const salt = await bcrypt.genSalt(10);
+          const hashPassword = bcrypt.hash(password, salt);
+          password = await hashPassword;
           // Calculate the age
           const birthDate = new Date(dateOfBirth);
           const ageDiffMs = Date.now() - birthDate.getTime();
           const ageDate = new Date(ageDiffMs);
           const age = Math.abs(ageDate.getUTCFullYear() - 1970);
           // Print the age
-          // console.log(age);
+
           if (!dateOfBirth) {
             res.send("Date of birth is required");
           } else if (age <= 18) {
             res.send("Age must be graterthan 18 years");
+          } else if (validator.isEmail(emailid) == false) {
+            res.send("Please enter valid email");
           } else {
             connection.execute(
               `INSERT INTO users ( username, password, name, address, phonenumber, emailid, gender, dateofbirth) VALUES (?,?,?,?,?,?,?,?)`,
@@ -95,34 +110,42 @@ app.post("/register", (req, res) => {
 });
 
 //Login
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const username = req.body.username;
-  const password = req.body.password;
+  let password = req.body.password;
+
   connection.execute(
-    `select username, password from users where username = ?`,
+    `select username, password, userid from users where username = ?`,
     [username],
-    (err, userObj) => {
-      if (err) {
-        res.send({
-          status: false,
-          message: err,
-        });
-      } else if (!userObj[0]) {
-        res.send("username is invalid");
-      } else if (
-        userObj[0].username === username &&
-        userObj[0].password === password
-      ) {
-        res.send({
-          username: userObj[0].username,
-          password: userObj[0].password,
-          message: "login successful",
-        });
-      } else {
-        res.send({
-          status: false,
-          message: "Password is incorrect",
-        });
+    async (err, userObj) => {
+      if (userObj) {
+        // console.log("db pwd", userObj[0].password);
+        const match = await bcrypt.compare(password, userObj[0].password);
+        if (err) {
+          res.send({
+            status: false,
+            message: err,
+          });
+        } else if (!userObj[0]) {
+          res.send("username is invalid");
+        } else if (match) {
+          // create token
+          const token = createToken(userObj.userid);
+          res.cookie("access-token", token);
+          res.send({
+            status: true,
+            userid: userObj[0].userid,
+            username: userObj[0].username,
+            password: userObj[0].password,
+            token: token,
+            message: "login successful",
+          });
+        } else {
+          res.send({
+            status: false,
+            message: "Password is incorrect",
+          });
+        }
       }
     }
   );
@@ -159,7 +182,7 @@ app.get("/user/:id", (req, res) => {
 });
 
 //Update userById
-app.put("/user/:id", (req, res) => {
+app.put("/user/:id", auth, (req, res) => {
   // res.send("Update userdata");
   const userid = req.params.id;
   const firstName = req.body.firstname;
@@ -170,17 +193,20 @@ app.put("/user/:id", (req, res) => {
   const emailid = req.body.emailid;
   const gender = req.body.gender;
   const dateOfBirth = req.body.dateofbirth; // Format = "1990-01-01"
+  console.log(name);
   // Calculate the age
   const birthDate = new Date(dateOfBirth);
   const ageDiffMs = Date.now() - birthDate.getTime();
   const ageDate = new Date(ageDiffMs);
   const age = Math.abs(ageDate.getUTCFullYear() - 1970);
   // Print the age
-  // console.log(age);
+  console.log(dateOfBirth);
   if (!dateOfBirth) {
-    res.send("Date of birth is required");
+    res.send({ status: false, message: "Date of birth is required" });
   } else if (age <= 18) {
     res.send("Age must be graterthan 18 years");
+  } else if (validator.isEmail(emailid) == false) {
+    res.send("Please enter valid email");
   } else {
     let query =
       "update users set name = ?, address = ?, phonenumber = ?, emailid = ?, gender = ?, dateofbirth = ? where userid = ?";
@@ -210,5 +236,5 @@ app.put("/user/:id", (req, res) => {
 });
 
 app.listen(4000, () => {
-  console.log("running in the port no: 3000");
+  console.log("running in the port no: 4000");
 });
